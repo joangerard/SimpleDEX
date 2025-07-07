@@ -123,5 +123,38 @@ contract CPAMM {
         );
     }
 
-    function removeLiquidity() external {}
+    function removeLiquidity(
+        uint _shares
+    ) external returns (uint amountA, uint amountB) {
+        // calculate amount0 and amount1 to withdraw
+        // dx = s / T * x
+        // dy = s / T * y
+        uint balA = tokenA.balanceOf(address(this));
+        uint balB = tokenB.balanceOf(address(this));
+
+        amountA = (_shares * balA) / totalSupply;
+        amountB = (_shares * balB) / totalSupply;
+
+        require(amountA > 0 && amountB > 0, "amountA or amountB is 0");
+
+        // burn shares
+        _burn(msg.sender, _shares);
+
+        // update reserves
+        _update(balA - amountA, balB - amountB);
+
+        // transfer tokens to users
+        tokenA.transfer(msg.sender, amountA);
+        tokenB.transfer(msg.sender, amountB);
+    }
+
+    function getPriceTokenA() public view returns (uint) {
+        require(reserveA > 0, "Not enough liquidity");
+        return (reserveB * 10 ** 18) / reserveA;
+    }
+
+    function getPriceTokenB() public view returns (uint) {
+        require(reserveB > 0, "Not enough liquidity");
+        return (reserveA * 10 ** 18) / reserveB;
+    }
 }
