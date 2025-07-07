@@ -15,7 +15,6 @@ contract CPAMM {
     constructor(address _tokenA, address _tokenB) {
         tokenA = ERC20(_tokenA);
         tokenB = ERC20(_tokenB);
-        testNumber = 20;
     }
 
     function _mint(address _to, uint _amount) private {
@@ -31,6 +30,24 @@ contract CPAMM {
     function _update(uint _reserveA, uint _reserveB) private {
         reserveA = _reserveA;
         reserveB = _reserveB;
+    }
+
+    function _sqrt(uint256 y) internal pure returns (uint256 z) {
+        if (y > 3) {
+            z = y;
+            uint256 x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+        // else z = 0 (default value)
+    }
+
+    function _min(uint x, uint y) private pure returns (uint) {
+        return x <= y ? x : y;
     }
 
     function swap(
@@ -69,7 +86,42 @@ contract CPAMM {
         );
     }
 
-    function addLiquidity() external {}
+    function addLiquidity(
+        uint _amountA,
+        uint _amountB
+    ) external returns (uint shares) {
+        tokenA.transferFrom(msg.sender, address(this), _amountA);
+        tokenB.transferFrom(msg.sender, address(this), _amountB);
+
+        // dy * x == dx * y
+
+        if (reserveA > 0 || reserveB > 0) {
+            require(
+                reserveA * _amountB == reserveB * _amountA,
+                "dy * x == dx * y"
+            );
+        }
+
+        // mint shares
+        // s = dx / x * T = dy / y * T
+        if (totalSupply == 0) {
+            shares = _sqrt(_amountA * _amountB);
+        } else {
+            shares = _min(
+                (_amountA * totalSupply) / reserveA,
+                (_amountB * totalSupply) / reserveB
+            );
+        }
+
+        require(shares > 0, "share is 0");
+        _mint(msg.sender, shares);
+
+        // update reserves
+        _update(
+            tokenA.balanceOf(address(this)),
+            tokenB.balanceOf(address(this))
+        );
+    }
 
     function removeLiquidity() external {}
 }
