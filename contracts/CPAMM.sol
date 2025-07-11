@@ -50,34 +50,36 @@ contract CPAMM {
         return x <= y ? x : y;
     }
 
-    function swap(
-        address _tokenIn,
-        uint _amountIn
-    ) external returns (uint amountOut) {
-        require(
-            _tokenIn == address(tokenA) || _tokenIn == address(tokenB),
-            "Invalid token"
-        );
-        require(_amountIn > 0, "amount in = 0");
+    function swapAforB(uint _amountIn) public returns (uint amountOut) {
+        require(_amountIn > 0, "Amount to be swapped should be greater than 0");
+        require(reserveA > 0 && reserveB > 0, "Not enough liquidity");
 
-        // pull in token in
-        bool isTokenA = _tokenIn == address(tokenA);
-        (
-            ERC20 tokenIn,
-            ERC20 tokenOut,
-            uint reserveIn,
-            uint reserveOut
-        ) = isTokenA
-                ? (tokenA, tokenB, reserveA, reserveB)
-                : (tokenB, tokenA, reserveB, reserveA);
-
-        tokenIn.transferFrom(msg.sender, address(this), _amountIn);
+        tokenA.transferFrom(msg.sender, address(this), _amountIn);
 
         // calculate token out: dy = y*dx / (x + dx)
-        amountOut = (reserveOut * _amountIn) / (reserveIn + _amountIn);
+        amountOut = (reserveB * _amountIn) / (reserveA + _amountIn);
 
         // transfer token out to msg.sender
-        tokenOut.transfer(msg.sender, amountOut);
+        tokenB.transfer(msg.sender, amountOut);
+
+        // update the reserves
+        _update(
+            tokenA.balanceOf(address(this)),
+            tokenB.balanceOf(address(this))
+        );
+    }
+
+    function swapBforA(uint _amountIn) public returns (uint amountOut) {
+        require(_amountIn > 0, "Amount to be swapped should be greater than 0");
+        require(reserveA > 0 && reserveB > 0, "Not enough liquidity");
+
+        tokenB.transferFrom(msg.sender, address(this), _amountIn);
+
+        // calculate token out: dy = y*dx / (x + dx)
+        amountOut = (reserveA * _amountIn) / (reserveB + _amountIn);
+
+        // transfer token out to msg.sender
+        tokenA.transfer(msg.sender, amountOut);
 
         // update the reserves
         _update(
@@ -146,6 +148,8 @@ contract CPAMM {
         // transfer tokens to users
         tokenA.transfer(msg.sender, amountA);
         tokenB.transfer(msg.sender, amountB);
+
+        return (amountA, amountB);
     }
 
     function getPriceTokenA() public view returns (uint) {
