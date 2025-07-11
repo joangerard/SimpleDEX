@@ -12,25 +12,35 @@ def cli(sender: str, ecosystem, network, provider):
 
     click.echo(f"Connected to {ecosystem.name}:{network.name} using provider '{provider.name}'.")
 
-    deployer = sender if sender else accounts.test_accounts[0]
+    deployer = accounts.load(sender) if sender else accounts.test_accounts[0]
     print(deployer.balance)
 
     print(f"Deploying contracts using: {deployer.address}")
 
     # Deploy TokenA
     print("Deploying TokenA...")
-    token_a = project.TokenA.deploy(sender=deployer, ecosystem=ecosystem, network=network, provider=provider)
+    token_a = project.TokenA.deploy(
+        sender=deployer, ecosystem=ecosystem, network=network, provider=provider, publish=True
+    )
     print(f"TokenA deployed at: {token_a.address}")
 
     # Deploy TokenB
     print("Deploying TokenB...")
-    token_b = project.TokenB.deploy(sender=deployer, ecosystem=ecosystem, network=network, provider=provider)
+    token_b = project.TokenB.deploy(
+        sender=deployer, ecosystem=ecosystem, network=network, provider=provider, publish=True
+    )
     print(f"TokenB deployed at: {token_b.address}")
 
     # Deploy CPAMM using the deployed token addresses
     print("Deploying CPAMM liquidity pool...")
     cpamm = project.CPAMM.deploy(
-        token_a.address, token_b.address, sender=deployer, ecosystem=ecosystem, network=network, provider=provider
+        token_a.address,
+        token_b.address,
+        sender=deployer,
+        ecosystem=ecosystem,
+        network=network,
+        provider=provider,
+        publish=True,
     )
     print(f"CPAMM deployed at: {cpamm.address}")
 
